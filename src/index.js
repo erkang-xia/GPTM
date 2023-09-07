@@ -1,6 +1,6 @@
 require('dotenv').config();
 const readline = require('readline');
-
+const ora = require('ora');
 const { Configuration, OpenAIApi } = require('openai');
 const configuration = new Configuration({
   organization: 'org-DVSylqsMSqgTBTBJGS6F7A0I',
@@ -13,31 +13,38 @@ const rl = readline.createInterface({
   output: process.stdout,
   terminal: false,
 });
-
 let history = [];
+const config = {
+  intro: [
+    'Available commands:',
+    ' 1. clear: Clears chat history',
+    ' 2. exit: Exits the program',
+  ],
+  chatApiParams: {
+    model: 'gpt-3.5-turbo',
+    max_tokens: 2048,
+  },
+};
 
 rl.setPrompt('> ');
 
-const prompt = () => {
+const promptAndResume = () => {
+  rl.resume();
   console.log(
     '────────────────────────────────────────────────────────────────────────────────────'
   );
   rl.prompt();
 };
 
-console.log(
-  'Available commands:\n' +
-    '1. clear: Clears chat history\n' +
-    '2. exit: Exits the program\n'
-);
-prompt();
+config.intro.forEach((line) => console.log(line));
+promptAndResume();
 
 rl.on('line', (line) => {
   switch (line.toLowerCase().trim()) {
     case 'clear':
       history = [];
       console.log('Chat history is now cleared!');
-      prompt();
+      promptAndResume();
       return;
     case 'exit':
       process.exit();
@@ -46,19 +53,19 @@ rl.on('line', (line) => {
     default:
       rl.pause();
       history.push({ role: 'user', content: line });
+      const spinner = ora().start('');
       openai
-        .createChatCompletion({
-          model: 'gpt-3.5-turbo',
-          messages: history,
-          max_tokens: 2048,
-        })
+        .createChatCompletion(
+          Object.assign(config.chatApiParams, { messages: history })
+        )
         .then((res) => {
+          spinner.stop();
           res.data.choices.forEach((choice) => {
             history.push(choice.message);
             console.log(choice.message.content);
           });
-          rl.resume();
-          prompt();
-        });
+        })
+        .catch((err) => spinner.fail(err))
+        .finally(promptAndResume);
   }
 });
