@@ -4,6 +4,8 @@ import readline from 'readline';
 import ora from 'ora';
 import cliMd from 'cli-markdown';
 import { google as googleapis } from 'googleapis';
+import clipboard from 'clipboardy';
+
 const google = googleapis.customsearch('v1').cse;
 
 dotenv.config();
@@ -27,6 +29,7 @@ const config = {
     'Available commands:',
     ' * clear: Clears chat history',
     ' * exit/quit/q: Exit the program',
+    ' * copy: Copy the last message to clickboard',
   ],
   chatApiParams: {
     model: 'gpt-3.5-turbo',
@@ -148,6 +151,17 @@ rl.on('line', (line) => {
       process.exit();
     case '':
       return;
+
+    case 'cp':
+    case 'copy':
+      const content = history.findLast(
+        (item) => item.role === 'assistant'
+      )?.content;
+      if (content) {
+        clipboard.writeSync(content);
+        console.log('Messaghe Copied');
+      } else console.warn('History is empty; nothing to copy');
+      return promptAndResume();
     default:
       rl.pause();
       chat({
