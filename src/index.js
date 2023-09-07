@@ -33,15 +33,17 @@ const config = {
     max_tokens: 2048,
   },
   systemPrompts: [
-    'Always use code blocks with the appropriate language tags.',
-    'If the question needs real-time information that you may not have access to, simply reply with "I do not have real-time information"',
+    'Always use code blocks with the appropriate language tags',
+    'If the question needs real-time information that you may not have access to, simply reply with "I do not have real-time information" and nothing else',
   ],
   keywordForWeb: [
     'not have access to real-time',
     "don't access to real-time",
     'not able to provide real-time',
-    "I don't have real-time access",
+    "don't have real-time",
     'not have real-time',
+    'as of my training data',
+    'as of september 2021',
   ],
   googleSearchAuth: {
     auth: process.env.GOOGLE_CUSTOM_SEARCH_API_KEY,
@@ -69,24 +71,54 @@ const googleSearch = (query) =>
         : Promise.reject('No search result found')
     );
 
-const chat = (messages) =>
-  openai.createChatCompletion(
-    Object.assign(config.chatApiParams, { messages: messages })
-  );
-const output = (message) => {
-  history.push(message);
-  const result = message.content.includes('```')
-    ? cliMd(message.content).trim()
-    : message.content;
-  return Promise.resolve(console.log(result));
-};
-
 const needWebBrowsing = (response) =>
   config.keywordForWeb.some((frag) => response.toLowerCase().includes(frag));
 const newHistory = () =>
   config.systemPrompts.map((prompt) => {
     return { role: 'system', content: prompt };
   });
+const chat = (params) => {
+  history.push({ role: 'user', content: params.message });
+  const spinner = ora().start(params.spinnerMessage);
+  return openai
+    .createChatCompletion(
+      Object.assign(config.chatApiParams, { messages: history })
+    )
+    .then((res) => {
+      spinner.stop();
+      const message = res.data.choices[0].message;
+      history.push(message);
+      if (!params.nested && needWebBrowsing(message.content)) {
+        return googleSearch(params.message).then((text) =>
+          chat({
+            message: `treat following information as facts:
+        
+            ${text}
+            
+          Using the above search results, take a best guess at answering ${params.message}. 
+          Exclude any disclaimer.Be short and don't say "based on the search results". 
+          Pretend you know the info I provided, and you are answering this question first time. 
+        `,
+            spinnerMessage: `Browsing the internet...`,
+            nested: true,
+          })
+        );
+      } else {
+        return Promise.resolve(
+          console.log(
+            message.content.includes('```')
+              ? cliMd(message.content).trim()
+              : message.content
+          )
+        );
+      }
+    })
+    .catch((err) => console.error(err.stack))
+    .finally(() => {
+      if (!params.nested) promptAndResume();
+    });
+};
+
 //let history = Array.from(config.systemPrompts); // create a new array using Array.from() instead of shallow copy;
 const history = newHistory();
 rl.setPrompt('> ');
@@ -118,21 +150,10 @@ rl.on('line', (line) => {
       return;
     default:
       rl.pause();
-      history.push({ role: 'user', content: line });
-      const spinner = ora().start('');
-      chat(history)
-        .then(async (res) => {
-          spinner.stop();
-          if (needWebBrowsing(res.data.choices[0].message.content)) {
-            return googleSearch(line).then((text) =>
-              Promise.resolve(console.log(text))
-            );
-          } else {
-            return output(res.data.choices[0].message);
-          }
-        })
-        //.catch((err) => spinner.fail(err.message))
-        .catch((err) => console.error(err.stack))
-        .finally(promptAndResume);
+      chat({
+        message: line,
+        spinnerMessage: `Asking ${config.chatApiParams.model}`,
+        nested: false,
+      });
   }
 });
