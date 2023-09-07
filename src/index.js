@@ -11,7 +11,15 @@ const openai = new OpenAIApi(configuration);
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
-  terminal: false,
+  completer: (line) => {
+    const completions = ['clear', 'exit', 'abc', 'aabc', 'accb']; // predefined list of commands
+    const hits = completions.filter((match) =>
+      match.startsWith(line.toLowerCase())
+    ); // filter the list based on what user has entered so far
+
+    // If there are matching commands, return those. Otherwise, return the full list.
+    return [hits.length ? hits : completions, line];
+  },
 });
 let history = [];
 const config = {
