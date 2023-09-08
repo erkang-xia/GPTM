@@ -16,6 +16,7 @@
     "googleapis": "126.0.1",
     "keypress": "0.2.1",
     "openai": "^3.2.1",
-    "ora": "5.4.1"
+    "ora": "5.4.1",
+    "pdf-text-reader": "4.0.0"
   }
 }

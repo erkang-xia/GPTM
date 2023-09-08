@@ -1,4 +1,5 @@
-import dotenv from 'dotenv';
+import texts from './texts.js';
+import configurations from './configurations.js';
 import {
   Configuration,
   OpenAIApi,
@@ -9,10 +10,7 @@ import ora from 'ora';
 import cliMd from 'cli-markdown';
 import { google as googleapis } from 'googleapis';
 import clipboard from 'clipboardy';
-
-const google = googleapis.customsearch('v1').cse;
-
-dotenv.config();
+import { readPdfText } from 'pdf-text-reader';
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -36,45 +34,12 @@ process.stdin.on('keypress', (letter, key) => {
   }
 });
 
-const config = {
-  intro: [
-    'Available commands:',
-    ' * clear: Clears chat history',
-    ' * exit/quit/q: Exit the program',
-    ' * copy: Copy the last message to clickboard',
-  ],
-  chatApiParams: {
-    model: 'gpt-3.5-turbo',
-    max_tokens: 2048,
-  },
-  systemPrompts: [
-    'Always use code blocks with the appropriate language tags',
-    'If the question needs real-time information that you may not have access to, simply reply with "I do not have real-time information" and nothing else',
-  ],
-  keywordForWeb: [
-    'not have access to real-time',
-    "don't access to real-time",
-    'not able to provide real-time',
-    "don't have real-time",
-    'not have real-time',
-    'as of my training data',
-    'as of september 2021',
-  ],
-  googleSearchAuth: {
-    auth: process.env.GOOGLE_CUSTOM_SEARCH_API_KEY,
-    cx: process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID,
-  },
-  openaiAuth: {
-    organization: process.env.OPENAI_ORG_ID,
-    apiKey: process.env.OPENAI_API_KEY,
-  },
-};
-
-const openai = new OpenAIApi(new Configuration(config.openaiAuth));
+const google = googleapis.customsearch('v1').cse;
+const openai = new OpenAIApi(new Configuration(configurations.openaiAuth));
 
 const googleSearch = (query) =>
   google
-    .list(Object.assign(config.googleSearchAuth, { q: query }))
+    .list(Object.assign(configurations.googleSearchAuth, { q: query }))
     .then((response) =>
       response.data.items
         .filter((result) => result.snippet)
@@ -87,9 +52,9 @@ const googleSearch = (query) =>
     );
 
 const needWebBrowsing = (response) =>
-  config.keywordForWeb.some((frag) => response.toLowerCase().includes(frag));
+  texts.keywordForWeb.some((frag) => response.toLowerCase().includes(frag));
 const newHistory = () =>
-  config.systemPrompts.map((prompt) => {
+  texts.systemPrompts.map((prompt) => {
     return { role: Role.System, content: prompt };
   });
 const chat = (params) => {
@@ -97,7 +62,7 @@ const chat = (params) => {
   const spinner = ora().start(params.spinnerMessage);
   return openai
     .createChatCompletion(
-      Object.assign(config.chatApiParams, { messages: history })
+      Object.assign(configurations.chatApiParams, { messages: history })
     )
     .then((res) => {
       spinner.stop();
@@ -106,14 +71,7 @@ const chat = (params) => {
       if (!params.nested && needWebBrowsing(message.content)) {
         return googleSearch(params.message).then((text) =>
           chat({
-            message: `treat following information as facts:
-        
-            ${text}
-            
-          Using the above search results, take a best guess at answering ${params.message}. 
-          Exclude any disclaimer.Be short and don't say "based on the search results". 
-          Pretend you know the info I provided, and you are answering this question first time. 
-        `,
+            message: texts.messageForWeb(text, params.message),
             spinnerMessage: `Browsing the internet...`,
             nested: true,
           })
@@ -134,26 +92,23 @@ const chat = (params) => {
     });
 };
 
-//let history = Array.from(config.systemPrompts); // create a new array using Array.from() instead of shallow copy;
-const history = newHistory();
+let history = newHistory();
 rl.setPrompt('> ');
 
 const promptAndResume = () => {
   rl.resume();
-  console.log(
-    '────────────────────────────────────────────────────────────────────────────────────'
-  );
+  console.log(texts.line);
   rl.prompt();
 };
 
-config.intro.forEach((line) => console.log(line));
+console.log(texts.menu);
 promptAndResume();
 
 rl.on('line', (line) => {
   switch (line.toLowerCase().trim()) {
     case 'h':
     case 'help':
-      config.intro.map((line) => console.log(line));
+      console.log(texts.menu);
       return promptAndResume();
     case 'clear':
       history = newHistory();
@@ -175,14 +130,14 @@ rl.on('line', (line) => {
       )?.content;
       if (content) {
         clipboard.writeSync(content);
-        console.log('Messaghe Copied');
+        console.log('Message Copied');
       } else console.warn('History is empty; nothing to copy');
       return promptAndResume();
     default:
       rl.pause();
       chat({
         message: line.replace(newLinePlaceholder, '\n'),
-        spinnerMessage: `Asking ${config.chatApiParams.model}`,
+        spinnerMessage: `Asking ${configurations.chatApiParams.model}`,
         nested: false,
       });
   }
