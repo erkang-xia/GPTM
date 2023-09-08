@@ -1,5 +1,9 @@
 import dotenv from 'dotenv';
-import { Configuration, OpenAIApi } from 'openai';
+import {
+  Configuration,
+  OpenAIApi,
+  ChatCompletionRequestMessageRoleEnum as Role,
+} from 'openai';
 import readline from 'readline';
 import ora from 'ora';
 import cliMd from 'cli-markdown';
@@ -86,10 +90,10 @@ const needWebBrowsing = (response) =>
   config.keywordForWeb.some((frag) => response.toLowerCase().includes(frag));
 const newHistory = () =>
   config.systemPrompts.map((prompt) => {
-    return { role: 'system', content: prompt };
+    return { role: Role.System, content: prompt };
   });
 const chat = (params) => {
-  history.push({ role: 'user', content: params.message });
+  history.push({ role: Role.User, content: params.message });
   const spinner = ora().start(params.spinnerMessage);
   return openai
     .createChatCompletion(
@@ -147,6 +151,10 @@ promptAndResume();
 
 rl.on('line', (line) => {
   switch (line.toLowerCase().trim()) {
+    case 'h':
+    case 'help':
+      config.intro.map((line) => console.log(line));
+      return promptAndResume();
     case 'clear':
       history = newHistory();
       console.log('Chat history is now cleared!');
@@ -163,7 +171,7 @@ rl.on('line', (line) => {
     case 'cp':
     case 'copy':
       const content = history.findLast(
-        (item) => item.role === 'assistant'
+        (item) => item.role === Role.Assistant
       )?.content;
       if (content) {
         clipboard.writeSync(content);
