@@ -10,6 +10,8 @@ export const texts = {
     'If the question needs real-time information that you may not have access to, reply with "I do not have real-time information" and nothing else',
   ],
 
+  forceWebPrompt: '[web]',
+
   keywordForWeb: [
     'access to real-time',
     'not able to provide real-time',
@@ -25,9 +27,9 @@ export const texts = {
     question
   ) => `treat following information as facts: ${text}
 
-          Using the info above, take a best guess at answering ${question}. 
-          Exclude any disclaimer. Be short and don't say "based on the search results". 
-          Pretend you know the info I provided, and you are answering this question first time.`,
+          You don't need access to real-time information. Using the info above, take a best guess at answering ${question}. 
+          Exclude any disclaimer. Be short and don't let me know the answer is based on the information I provide. 
+          Pretend you know the info already, and you are answering this question first time.`,
 
   messageForPDF: (text) =>
     `The following information is extracted from a PDF document, summerize it. ${text}.`,

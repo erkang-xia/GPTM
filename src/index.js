@@ -57,6 +57,25 @@ const googleSearch = (query) =>
 const needWebBrowsing = (response) =>
   texts.keywordForWeb.some((frag) => response.toLowerCase().includes(frag));
 
+const promptEngineer = (text) => {
+  text = text.replace(newLinePlaceholder, '\n');
+  if (text.includes(texts.forceWebPrompt)) {
+    text = text.replace(texts.forceWebPrompt, ' ').trim();
+    return googleSearch(text).then((res) =>
+      chat({
+        message: texts.messageForWeb(res, text),
+        spinnerMessage: `Browsing the internet...`,
+        nested: false,
+      })
+    );
+  } else {
+    chat({
+      message: text,
+      spinnerMessage: `Asking ${configurations.chatApiParams.model}`,
+      nested: false,
+    });
+  }
+};
 const chat = (params) => {
   history.add(Role.User, params.message);
   const spinner = ora().start(params.spinnerMessage);
@@ -150,10 +169,6 @@ rl.on('line', (line) => {
       return promptAndResume();
     default:
       rl.pause();
-      chat({
-        message: line.replace(newLinePlaceholder, '\n'),
-        spinnerMessage: `Asking ${configurations.chatApiParams.model}`,
-        nested: false,
-      });
+      promptEngineer(line);
   }
 });
