@@ -6,6 +6,10 @@ export const config = {
     model: 'gpt-3.5-turbo',
     max_tokens: 2048,
   },
+  imgApiParams: {
+    n: 1,
+    size: '1024x1024',
+  },
   googleSearchAuth: {
     auth: process.env.GOOGLE_CUSTOM_SEARCH_API_KEY,
     cx: process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID,

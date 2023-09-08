@@ -9,6 +9,9 @@ import {
 } from 'openai';
 import readline from 'readline';
 import ora from 'ora';
+import say from 'say';
+import got from 'got';
+import terminalImage from 'terminal-image';
 import cliMd from 'cli-markdown';
 import { google as googleapis } from 'googleapis';
 import clipboard from 'clipboardy';
@@ -58,7 +61,6 @@ const needWebBrowsing = (response) =>
   texts.keywordForWeb.some((frag) => response.toLowerCase().includes(frag));
 
 const promptEngineer = (text) => {
-  text = text.replace(newLinePlaceholder, '\n');
   if (text.includes(texts.forceWebPrompt)) {
     text = text.replace(texts.forceWebPrompt, ' ').trim();
     return googleSearch(text).then((res) =>
@@ -68,6 +70,9 @@ const promptEngineer = (text) => {
         nested: false,
       })
     );
+  } else if (text.includes(texts.forceImgPrompt)) {
+    text = text.replace(texts.forceImgPrompt, ' ').trim();
+    img(text);
   } else {
     chat({
       message: text,
@@ -76,6 +81,21 @@ const promptEngineer = (text) => {
     });
   }
 };
+
+const img = (param) => {
+  const spinner = ora().start('Generating Img..');
+  return openai
+    .createImage(Object.assign(configurations.imgApiParams, { prompt: param }))
+    .then((response) => {
+      console.log(response.data.data[0].url);
+      return got(response.data.data[0].url).buffer();
+    })
+    .then((body) => terminalImage.buffer(body, { width: '50%', height: '50%' }))
+    .then((res) => spinner.succeed('\n' + res))
+    .catch((err) => console.error(err.stack))
+    .finally(promptAndResume);
+};
+
 const chat = (params) => {
   history.add(Role.User, params.message);
   const spinner = ora().start(params.spinnerMessage);
@@ -134,6 +154,8 @@ console.log(texts.menu);
 promptAndResume();
 
 rl.on('line', (line) => {
+  say.stop();
+  line = line.replace(newLinePlaceholder, '\n').trim();
   switch (line.toLowerCase().trim()) {
     case 'h':
     case 'help':
@@ -150,7 +172,14 @@ rl.on('line', (line) => {
       console.log('Bye!');
       process.exit();
     case '':
-      return;
+      return promptAndResume();
+    case 'say':
+    case 'speak': {
+      const content = history.lastMessage()?.content;
+      if (content) say.speak(content);
+      else console.warn('No messages');
+      return promptAndResume();
+    }
 
     case 'cp':
     case 'copy':

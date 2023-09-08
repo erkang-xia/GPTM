@@ -3,7 +3,8 @@ export const texts = {
 * exit/quit/q     :Exit the program',
 * copy            :Copy the last message to clickboard'
 * down arror key  :For multi-line input
-* history         :Load history`,
+* history         :Load history
+* speak/say       : Speak out last response`,
 
   systemPrompts: [
     'Use code blocks with language tags',
@@ -11,6 +12,7 @@ export const texts = {
   ],
 
   forceWebPrompt: '[web]',
+  forceImgPrompt: '[img]',
 
   keywordForWeb: [
     'access to real-time',

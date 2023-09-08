@@ -38,4 +38,6 @@ export default class History {
   get() {
     return this.history;
   }
+  lastMessage = () =>
+    this.history.findLast((item) => item.role === Role.Assistant);
 }
