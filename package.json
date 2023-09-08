@@ -14,9 +14,11 @@
     "clipboardy": "3.0.0",
     "dotenv": "^16.3.1",
     "googleapis": "126.0.1",
+    "gpt-3-encoder": "1.1.4",
     "keypress": "0.2.1",
     "openai": "^3.2.1",
     "ora": "5.4.1",
-    "pdf-text-reader": "4.0.0"
+    "pdf-text-reader": "4.0.0",
+    "untildify": "5.0.0"
   }
 }

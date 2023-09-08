@@ -1,5 +1,7 @@
 import texts from './texts.js';
+import History from './history.js';
 import configurations from './configurations.js';
+import fs from 'fs';
 import {
   Configuration,
   OpenAIApi,
@@ -11,12 +13,15 @@ import cliMd from 'cli-markdown';
 import { google as googleapis } from 'googleapis';
 import clipboard from 'clipboardy';
 import { readPdfText } from 'pdf-text-reader';
+import untildify from 'untildify';
+import { encode } from 'gpt-3-encoder';
 
+const history = new History();
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
   completer: (line) => {
-    const completions = ['clear', 'exit', 'abc', 'aabc', 'accb']; // predefined list of commands
+    const completions = ['clear', 'copy', 'exit', 'help']; // predefined list of commands
     const hits = completions.filter((match) =>
       match.startsWith(line.toLowerCase())
     ); // filter the list based on what user has entered so far
@@ -50,19 +55,15 @@ const googleSearch = (query) =>
         ? Promise.resolve(results.join('\n'))
         : Promise.reject('No search result found')
     );
-
 const needWebBrowsing = (response) =>
   texts.keywordForWeb.some((frag) => response.toLowerCase().includes(frag));
-const newHistory = () =>
-  texts.systemPrompts.map((prompt) => {
-    return { role: Role.System, content: prompt };
-  });
+
 const chat = (params) => {
-  history.push({ role: Role.User, content: params.message });
+  history.add(Role.User, params.message);
   const spinner = ora().start(params.spinnerMessage);
   return openai
     .createChatCompletion(
-      Object.assign(configurations.chatApiParams, { messages: history })
+      Object.assign(configurations.chatApiParams, { messages: history.get() })
     )
     .then((res) => {
       spinner.stop();
@@ -91,8 +92,18 @@ const chat = (params) => {
       if (!params.nested) promptAndResume();
     });
 };
+const docToText = (file) => {
+  file = untildify(file);
+  if (fs.existsSync(file)) {
+    if (file.endsWith('.pdf'))
+      return readPdfText(file).then((pages) =>
+        pages.map((page) => page.lines).join('\n\n')
+      );
+    // TODO: support other file types like .txt and Word docs
+  }
+  return Promise.resolve();
+};
 
-let history = newHistory();
 rl.setPrompt('> ');
 
 const promptAndResume = () => {
@@ -111,7 +122,7 @@ rl.on('line', (line) => {
       console.log(texts.menu);
       return promptAndResume();
     case 'clear':
-      history = newHistory();
+      history.clear();
       console.log('Chat history is now cleared!');
       promptAndResume();
       return;
@@ -125,9 +136,9 @@ rl.on('line', (line) => {
 
     case 'cp':
     case 'copy':
-      const content = history.findLast(
-        (item) => item.role === Role.Assistant
-      )?.content;
+      const content = history
+        .get()
+        .findLast((item) => item.role === Role.Assistant)?.content;
       if (content) {
         clipboard.writeSync(content);
         console.log('Message Copied');
