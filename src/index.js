@@ -24,6 +24,14 @@ const rl = readline.createInterface({
   },
 });
 
+const newLinePlaceholder = '\u2008';
+process.stdin.on('keypress', (letter, key) => {
+  if (key?.name === 'down') {
+    rl.write(newLinePlaceholder);
+    process.stdout.write('\n');
+  }
+});
+
 const config = {
   intro: [
     'Available commands:',
@@ -165,7 +173,7 @@ rl.on('line', (line) => {
     default:
       rl.pause();
       chat({
-        message: line,
+        message: line.replace(newLinePlaceholder, '\n'),
         spinnerMessage: `Asking ${config.chatApiParams.model}`,
         nested: false,
       });
