@@ -2,7 +2,8 @@ export const texts = {
   menu: `* clear           :Clears chat history',
 * exit/quit/q     :Exit the program',
 * copy            :Copy the last message to clickboard'
-* down arror key  :For multi-line input`,
+* down arror key  :For multi-line input
+* history         :Load history`,
 
   systemPrompts: [
     'Use code blocks with language tags',

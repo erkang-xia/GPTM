@@ -10,8 +10,9 @@ export default class History {
   add(role, content) {
     this.history.push({ role: role, content: content });
   }
+
   push(message) {
-    this.history.push(message);
+    this.history.push({ role: message.role, content: message.content });
   }
   clear() {
     this.history = [];

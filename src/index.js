@@ -14,7 +14,6 @@ import { google as googleapis } from 'googleapis';
 import clipboard from 'clipboardy';
 import { readPdfText } from 'pdf-text-reader';
 import untildify from 'untildify';
-import { encode } from 'gpt-3-encoder';
 
 const history = new History();
 const rl = readline.createInterface({
@@ -143,6 +142,11 @@ rl.on('line', (line) => {
         clipboard.writeSync(content);
         console.log('Message Copied');
       } else console.warn('History is empty; nothing to copy');
+      return promptAndResume();
+
+    case 'history':
+      const his = history.get();
+      his.map((messgae) => console.log(messgae));
       return promptAndResume();
     default:
       rl.pause();
