@@ -72,6 +72,9 @@ const promptEngineer = (text) => {
   } else if (text.includes(texts.forceImgPrompt)) {
     text = text.replace(texts.forceImgPrompt, ' ').trim();
     img(text);
+  } else if (text.includes(texts.forceDirPrompt)) {
+    text = text.replace(texts.forceDirPrompt, ' ').trim();
+    retriver.askDir(text);
   } else if (Retriver.isSupported(text)) {
     let spinner = ora().start();
     retriver

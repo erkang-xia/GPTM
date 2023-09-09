@@ -13,6 +13,7 @@ export const texts = {
 
   forceWebPrompt: '[web]',
   forceImgPrompt: '[img]',
+  forceDirPrompt: '[dir]',
 
   keywordForWeb: [
     'access to real-time',

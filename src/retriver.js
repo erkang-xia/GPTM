@@ -29,8 +29,9 @@ dotenv.config();
 export default class Retriver {
   VECTOR_STORE_PATH = 'Documents.index';
   costLimit = 1;
+  question = 'what those docs about?';
 
-  static embeddings = new OpenAIEmbeddings({
+  embeddings = new OpenAIEmbeddings({
     openAIApiKey: configurations.openaiAuth.apiKey,
   });
   static textSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
@@ -38,7 +39,7 @@ export default class Retriver {
     this.clear();
   }
   clear = () => {
-    this.vectorStore = new MemoryVectorStore(Retriver.embeddings);
+    this.vectorStore = new MemoryVectorStore(this.embeddings);
     this.hasDocs = false;
   };
 
@@ -65,7 +66,7 @@ export default class Retriver {
   };
 
   // Define a function to calculate the cost of tokenizing the documents
-  static async calculateCost(docs) {
+  async calculateCost(docs) {
     const modelName = 'text-embedding-ada-002';
     const modelKey = models[modelName];
     const model = await load(registry[modelKey]);
@@ -83,7 +84,7 @@ export default class Retriver {
   }
 
   //Define a function to normalize the content of the documents
-  static normalizeDocuments(docs) {
+  normalizeDocuments(docs) {
     return docs.map((doc) => {
       if (typeof doc.pageContent === 'string') {
         return doc.pageContent;
@@ -94,9 +95,9 @@ export default class Retriver {
   }
 
   //  Define the main function to run the entire process
-  askDir = async (params) => {
+  askDir = async (param) => {
     //Initialize the document loader with supported file formats
-    const loader = new DirectoryLoader(params.path, {
+    const loader = new DirectoryLoader(param, {
       '.json': (path) => new JSONLoader(path),
       '.txt': (path) => new TextLoader(path),
       '.csv': (path) => new CSVLoader(path),
@@ -110,7 +111,7 @@ export default class Retriver {
 
     // Calculate the cost of tokenizing the documents
     console.log('Calculating cost...');
-    const cost = await calculateCost(docs);
+    const cost = await this.calculateCost(docs);
     console.log('Cost calculated:', cost);
 
     // Check if the cost is within the acceptable limit
@@ -122,10 +123,13 @@ export default class Retriver {
 
       // Check if an existing vector store is available
       console.log('Checking for existing vector store...');
-      if (fs.existsSync(VECTOR_STORE_PATH)) {
+      if (fs.existsSync(this.VECTOR_STORE_PATH)) {
         // Load the existing vector store
         console.log('Loading existing vector store...');
-        this.vectorStore = await HNSWLib.load(VECTOR_STORE_PATH, embeddings);
+        this.vectorStore = await HNSWLib.load(
+          this.VECTOR_STORE_PATH,
+          this.embeddings
+        );
         console.log('Vector store loaded.');
       } else {
         // Create a new vector store if one does not exist
@@ -133,24 +137,30 @@ export default class Retriver {
         const textSplitter = new RecursiveCharacterTextSplitter({
           chunkSize: 1000,
         });
-        const normalizedDocs = normalizeDocuments(docs);
+        const normalizedDocs = this.normalizeDocuments(docs);
         const splitDocs = await textSplitter.createDocuments(normalizedDocs);
 
         // Generate the vector store from the documents
-        vectorStore = await HNSWLib.fromDocuments(splitDocs, embeddings);
+        this.vectorStore = await HNSWLib.fromDocuments(
+          splitDocs,
+          this.embeddings
+        );
         // Save the vector store to the specified path
-        await vectorStore.save(VECTOR_STORE_PATH);
+        await this.vectorStore.save(this.VECTOR_STORE_PATH);
 
         console.log('Vector store created.');
       }
 
       // Create a retrieval chain using the language model and vector store
       console.log('Creating retrieval chain...');
-      const chain = RetrievalQAChain.fromLLM(model, vectorStore.asRetriever());
+      const chain = RetrievalQAChain.fromLLM(
+        model,
+        this.vectorStore.asRetriever()
+      );
 
       // Query the retrieval chain with the specified question
       console.log('Querying chain...');
-      const res = await chain.call({ query: params.question });
+      const res = await chain.call({ query: this.question });
       console.log({ res });
     } else {
       // If the cost exceeds the limit, skip the embedding process
