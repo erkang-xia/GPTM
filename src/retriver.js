@@ -161,7 +161,7 @@ export default class Retriver {
       // Query the retrieval chain with the specified question
       console.log('Querying chain...');
       const res = await chain.call({ query: this.question });
-      console.log({ res });
+      console.log(res.text);
     } else {
       // If the cost exceeds the limit, skip the embedding process
       console.log(
