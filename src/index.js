@@ -1,7 +1,7 @@
 import texts from './texts.js';
 import History from './history.js';
 import configurations from './configurations.js';
-import fs from 'fs';
+import Retriver from './retriver.js';
 import {
   Configuration,
   OpenAIApi,
@@ -15,10 +15,9 @@ import terminalImage from 'terminal-image';
 import cliMd from 'cli-markdown';
 import { google as googleapis } from 'googleapis';
 import clipboard from 'clipboardy';
-import { readPdfText } from 'pdf-text-reader';
-import untildify from 'untildify';
 
 const history = new History();
+const retriver = new Retriver();
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -73,6 +72,26 @@ const promptEngineer = (text) => {
   } else if (text.includes(texts.forceImgPrompt)) {
     text = text.replace(texts.forceImgPrompt, ' ').trim();
     img(text);
+  } else if (Retriver.isSupported(text)) {
+    let spinner = ora().start();
+    retriver
+      .add(text)
+      .then((_) => spinner.succeed(text))
+      .then(promptAndResume);
+  } else if (retriver.hasDocs) {
+    retriver.query(text).then((docs) =>
+      docs.length
+        ? chat({
+            message: texts.messageForDoc(docs, text),
+            spinnerMessage: `Asking ${configurations.chatApiParams.model}`,
+            nested: false,
+          })
+        : chat({
+            message: text,
+            spinnerMessage: `Asking ${configurations.chatApiParams.model}`,
+            nested: false,
+          })
+    );
   } else {
     chat({
       message: text,
@@ -129,17 +148,6 @@ const chat = (params) => {
     .finally(() => {
       if (!params.nested) promptAndResume();
     });
-};
-const docToText = (file) => {
-  file = untildify(file);
-  if (fs.existsSync(file)) {
-    if (file.endsWith('.pdf'))
-      return readPdfText(file).then((pages) =>
-        pages.map((page) => page.lines).join('\n\n')
-      );
-    // TODO: support other file types like .txt and Word docs
-  }
-  return Promise.resolve();
 };
 
 rl.setPrompt('> ');

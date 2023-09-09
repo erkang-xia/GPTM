@@ -32,6 +32,15 @@ export const texts = {
           You don't need access to real-time information. Using the info above, take a best guess at answering ${question}. 
           Exclude any disclaimer. Be short and don't let me know the answer is based on the information I provide. 
           Pretend you know the info already, and you are answering this question first time.`,
+  messageForDoc: (
+    doc,
+    question
+  ) => `I was asked the following query: ${question}
+  
+  Some relevant snippets from documents that I have that you may find useful in the context of my query:  
+    
+    ${doc.map((doc) => doc.pageContent).join('\n')}
+  Answer to best of your abilities the original query`,
 
   messageForPDF: (text) =>
     `The following information is extracted from a PDF document, summerize it. ${text}.`,
