@@ -15,6 +15,8 @@ import terminalImage from 'terminal-image';
 import cliMd from 'cli-markdown';
 import { google as googleapis } from 'googleapis';
 import clipboard from 'clipboardy';
+import downloadsFolder from 'downloads-folder';
+import * as fs from 'fs';
 
 const history = new History();
 const retriver = new Retriver();
@@ -111,6 +113,12 @@ const img = (param) => {
     .then((response) => {
       console.log(response.data.data[0].url);
       return got(response.data.data[0].url).buffer();
+    })
+    .then((buffer) => {
+      const file = `${downloadsFolder()}/${param.replace(/ /g, '_')}.jpg`;
+      fs.writeFileSync(file, buffer);
+      spinner.succeed(`Image saved to ${file}`);
+      return file;
     })
     .then((body) => terminalImage.buffer(body, { width: '50%', height: '50%' }))
     .then((res) => spinner.succeed('\n' + res))

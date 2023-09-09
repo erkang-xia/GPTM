@@ -14,6 +14,7 @@
     "cli-markdown": "3.0.5",
     "clipboardy": "3.0.0",
     "dotenv": "^16.3.1",
+    "downloads-folder": "3.0.3",
     "googleapis": "126.0.1",
     "got": "^12.6.0",
     "gpt-3-encoder": "1.1.4",
