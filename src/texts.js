@@ -4,7 +4,8 @@ export const texts = {
 * copy            :Copy the last message to clickboard'
 * down arror key  :For multi-line input
 * history         :Load history
-* speak/say       : Speak out last response`,
+* speak/say       : Speak out last response
+* export : Save current chat history as ChatML doc`,
 
   systemPrompts: [
     'Use code blocks with language tags',

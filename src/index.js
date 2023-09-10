@@ -228,6 +228,13 @@ rl.on('line', (line) => {
       const his = history.get();
       his.map((messgae) => console.log(messgae));
       return promptAndResume();
+
+    case 'export': {
+      const file = `${downloadsFolder()}/${Date.now()}.chatml.json`;
+      fs.writeFileSync(file, JSON.stringify(history.get()));
+      console.log(`Chat history exported as ${file}`);
+      return promptAndResume();
+    }
     default:
       rl.pause();
       promptEngineer(line);
