@@ -4,7 +4,7 @@ import { JSONLoader } from 'langchain/document_loaders/fs/json';
 import { TextLoader } from 'langchain/document_loaders/fs/text';
 import { CSVLoader } from 'langchain/document_loaders/fs/csv';
 import { PDFLoader } from 'langchain/document_loaders/fs/pdf';
-
+import { PlaywrightWebBaseLoader } from 'langchain/document_loaders/web/playwright';
 // Import OpenAI language model and other related modules
 import { OpenAI } from 'langchain/llms/openai';
 import { RetrievalQAChain } from 'langchain/chains';
@@ -24,6 +24,7 @@ import models from '@dqbd/tiktoken/model_to_encoding.json' assert { type: 'json'
 import untildify from 'untildify';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import { URL } from 'url';
 dotenv.config();
 
 export default class Retriver {
@@ -54,7 +55,18 @@ export default class Retriver {
     );
   };
 
+  static isValidUrl = (url) => {
+    try {
+      new URL(url);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
+
   static toText = (file) => {
+    if (Retriver.isValidUrl(file))
+      return new PlaywrightWebBaseLoader(file).load();
     file = untildify(file);
     if (!fs.existsSync(file)) return Promise.reject(`Missing file: ${file}`);
     if (file.endsWith('.pdf')) return new PDFLoader(file).load();

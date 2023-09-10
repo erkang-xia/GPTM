@@ -20,32 +20,34 @@ import * as fs from 'fs';
 import untildify from 'untildify';
 const history = new History();
 const retriver = new Retriver();
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  completer: (line) => {
-    //https://stackoverflow.com/questions/42197385/
-    if (line.includes('/')) {
-      const dir = line.substring(0, line.lastIndexOf('/') + 1);
-      if (fs.existsSync(untildify(dir))) {
-        const suffix = line.substring(line.lastIndexOf('/') + 1);
-        const hits = fs
-          .readdirSync(untildify(dir))
-          .filter((file) => file.startsWith(suffix))
-          .map((file) => dir + file);
-        if (hits.length) return [hits, line];
+const rl = readline
+  .createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    completer: (line) => {
+      //https://stackoverflow.com/questions/42197385/
+      if (line.includes('/')) {
+        const dir = line.substring(0, line.lastIndexOf('/') + 1);
+        if (fs.existsSync(untildify(dir))) {
+          const suffix = line.substring(line.lastIndexOf('/') + 1);
+          const hits = fs
+            .readdirSync(untildify(dir))
+            .filter((file) => file.startsWith(suffix))
+            .map((file) => dir + file);
+          if (hits.length) return [hits, line];
+        }
       }
-    }
 
-    const completions = ['clear', 'copy', 'exit', 'help']; // predefined list of commands
-    const hits = completions.filter((match) =>
-      match.startsWith(line.toLowerCase())
-    ); // filter the list based on what user has entered so far
+      const completions = ['clear', 'copy', 'exit', 'help']; // predefined list of commands
+      const hits = completions.filter((match) =>
+        match.startsWith(line.toLowerCase())
+      ); // filter the list based on what user has entered so far
 
-    // If there are matching commands, return those. Otherwise, return the full list.
-    return [hits.length ? hits : completions, line];
-  },
-});
+      // If there are matching commands, return those. Otherwise, return the full list.
+      return [hits.length ? hits : completions, line];
+    },
+  })
+  .on('close', () => console.log('Bye'));
 
 const newLinePlaceholder = '\u2008';
 process.stdin.on('keypress', (letter, key) => {
@@ -90,7 +92,7 @@ const promptEngineer = (text) => {
   } else if (text.includes(texts.forceDirPrompt)) {
     text = text.replace(texts.forceDirPrompt, ' ').trim();
     retriver.askDir(text).then(promptAndResume);
-  } else if (Retriver.isSupported(text)) {
+  } else if (Retriver.isSupported(text) || Retriver.isValidUrl(text)) {
     let spinner = ora().start();
     retriver
       .add(text)
